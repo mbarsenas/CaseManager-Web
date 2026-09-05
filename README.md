@@ -15,6 +15,8 @@ A single-practice case management app built with Next.js, TypeScript, Prisma and
 - Add, edit and delete citations with citation text, a Westlaw permalink/source link and relevance notes. The server records the signed-in user's name/email and creation time.
 - Dashboard with outstanding deadlines and open-task count.
 - Authenticated APIs and file downloads, validated inputs and responsive layouts.
+- Loading/retry states for client and case lists; clear network and session errors without losing form values.
+- Research save confirmations tracked by citation and destination case, so new searches cannot inherit an unrelated result's saved state.
 
 Clients and cases cannot be deleted through the API; archive a case to preserve its related records.
 Citations contain references only; no Westlaw page is fetched or scraped.
@@ -38,6 +40,9 @@ npm start -- --port 3101
 
 Open http://localhost:3101. The launch script sets the authentication callback origin to the requested port.
 For development use `npm run dev`.
+Development uses `.next-dev/`; production builds and previews use `.next-production/`.
+This lets a development server run without replacing the preview's compiled files.
+Stop a production preview before rebuilding its production output, then start it again.
 
 The launcher loads this project's `.env`, followed by `.env.local`, overriding conflicting inherited shell variables.
 A deployment without those files uses injected environment variables.
@@ -94,4 +99,3 @@ npm run build
 Validation tests cover invalid dates, dangerous URLs, invalid numeric inputs, required fields and protected-field writes.
 End-to-end verification on an isolated Neon branch covered sign-in, every record type, updates, completion, archive filtering, upload/download, unauthorized access and deletion.
 Browser verification covered sign-in, the case record and citation creation.
-

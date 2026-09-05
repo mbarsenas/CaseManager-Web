@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { requestJson, errorMessage } from "@/lib/http";
 
 export default function NewClientPage() {
   const router = useRouter();
@@ -17,22 +18,17 @@ export default function NewClientPage() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/clients", {
+    try {
+    const created = await requestJson<{ id: string }>("/api/clients", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, phone, conflictNotes }),
     });
 
-    setLoading(false);
-
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error ?? "Something went wrong.");
-      return;
-    }
-
-    router.push("/clients");
+    router.push(`/clients/${created.id}`);
     router.refresh();
+    } catch (error) { setError(errorMessage(error)); }
+    finally { setLoading(false); }
   }
 
   return (
@@ -60,7 +56,7 @@ export default function NewClientPage() {
             onChange={(e) => setConflictNotes(e.target.value)}
           />
         </div>
-        {error && <p style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</p>}
+        {error && <p role="alert" style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</p>}
         <button type="submit" className="btn" disabled={loading}>
           {loading ? "Saving…" : "Save client"}
         </button>

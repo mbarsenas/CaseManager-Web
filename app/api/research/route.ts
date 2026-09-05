@@ -27,11 +27,23 @@ export async function GET(req: NextRequest) {
     headers["Authorization"] = `Token ${process.env.COURTLISTENER_API_TOKEN}`;
   }
 
-  const res = await fetch(url.toString(), { headers, signal: AbortSignal.timeout(15000), cache: "no-store" });
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), { headers, signal: AbortSignal.timeout(15000), cache: "no-store" });
+  } catch (fetchError) {
+    const message = fetchError instanceof Error ? fetchError.message : String(fetchError);
+    console.error("CourtListener fetch threw", fetchError);
+    return NextResponse.json(
+      { error: "Could not reach CourtListener", detail: message },
+      { status: 502 }
+    );
+  }
 
   if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    console.error("CourtListener search failed", { status: res.status, detail: detail.slice(0, 500) });
     return NextResponse.json(
-      { error: "CourtListener search failed", status: res.status },
+      { error: "CourtListener search failed", status: res.status, detail: detail.slice(0, 300) },
       { status: 502 }
     );
   }

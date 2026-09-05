@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { requestJson, errorMessage } from "@/lib/http";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,11 +14,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     // If no account exists yet on this instance, send them to setup instead.
-    fetch("/api/setup")
-      .then((res) => res.json())
+    requestJson<{ needsSetup: boolean }>("/api/setup")
       .then((data) => {
         if (data.needsSetup) router.replace("/setup");
-      });
+      }).catch(error => setError(errorMessage(error)));
   }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -25,21 +25,23 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
+    try {
     const result = await signIn("credentials", {
       email,
       password,
       redirect: false,
     });
 
-    setLoading(false);
-
-    if (result?.error) {
+    if (result?.error === "CredentialsSignin") {
       setError("Incorrect email or password.");
       return;
     }
+    if (!result?.ok || result.error) throw new Error("Unable to sign in. Please try again.");
 
     router.push("/");
     router.refresh();
+    } catch (error) { setError(errorMessage(error)); }
+    finally { setLoading(false); }
   }
 
   return (
@@ -66,7 +68,7 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
-        {error && <p style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</p>}
+        {error && <p role="alert" style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</p>}
         <button type="submit" className="btn" disabled={loading}>
           {loading ? "Signing in…" : "Sign in"}
         </button>

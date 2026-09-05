@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { requestJson, errorMessage } from "@/lib/http";
 
 export default function SetupPage() {
   const router = useRouter();
@@ -13,11 +14,10 @@ export default function SetupPage() {
 
   useEffect(() => {
     // If setup was already completed, this page has no reason to exist.
-    fetch("/api/setup")
-      .then((res) => res.json())
+    requestJson<{ needsSetup: boolean }>("/api/setup")
       .then((data) => {
-        if (!data.needsSetup) router.replace("/login");
-      });
+        if (data.needsSetup === false) router.replace("/login");
+      }).catch(error => setError(errorMessage(error)));
   }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -25,21 +25,16 @@ export default function SetupPage() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/setup", {
+    try {
+    await requestJson("/api/setup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password }),
     });
 
-    setLoading(false);
-
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error ?? "Something went wrong.");
-      return;
-    }
-
     router.push("/login");
+    } catch (error) { setError(errorMessage(error)); }
+    finally { setLoading(false); }
   }
 
   return (
@@ -75,7 +70,7 @@ export default function SetupPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
-        {error && <p style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</p>}
+        {error && <p role="alert" style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</p>}
         <button type="submit" className="btn" disabled={loading}>
           {loading ? "Creating…" : "Create account"}
         </button>
