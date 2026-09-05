@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/next.cjs dev",
-    "build": "node scripts/next.cjs build",
+    "build": "node scripts/db.cjs generate && node scripts/next.cjs build",
     "start": "node scripts/next.cjs start",
     "lint": "tsc --noEmit",
     "db:generate": "node scripts/db.cjs generate",
