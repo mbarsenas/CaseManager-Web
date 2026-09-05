@@ -1,0 +1,32 @@
+{
+  "name": "case-manager",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/next.cjs dev",
+    "build": "node scripts/next.cjs build",
+    "start": "node scripts/next.cjs start",
+    "lint": "tsc --noEmit",
+    "db:generate": "node scripts/db.cjs generate",
+    "db:push": "node scripts/db.cjs db push",
+    "db:studio": "node scripts/db.cjs studio",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.cjs"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.19.0",
+    "bcryptjs": "^2.4.3",
+    "next": "^14.2.0",
+    "next-auth": "^4.24.7",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "prisma": "^5.19.0",
+    "typescript": "^5.5.0"
+  }
+}

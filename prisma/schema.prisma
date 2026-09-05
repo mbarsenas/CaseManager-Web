@@ -1,0 +1,180 @@
+// Prisma schema for the attorney case management app
+// Target DB: Postgres (Neon)
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CaseStatus {
+  OPEN
+  PENDING
+  CLOSED
+  ARCHIVED
+}
+
+enum UserRole {
+  ATTORNEY
+  STAFF
+}
+
+// The attorney (or staff) logging into this instance of the app.
+// There's no public sign-up — the first account is created via the
+// one-time /setup flow, and any additional accounts are added by
+// an existing user (not built yet — see README).
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  hashedPassword String
+  name           String?
+  role           UserRole @default(ATTORNEY)
+  createdAt      DateTime @default(now())
+
+  @@map("users")
+}
+
+enum DocumentTag {
+  PLEADING
+  CORRESPONDENCE
+  EVIDENCE
+  CONTRACT
+  OTHER
+}
+
+enum DeadlineSource {
+  MANUAL
+  PACER
+}
+
+model Client {
+  id            String   @id @default(cuid())
+  name          String
+  email         String?
+  phone         String?
+  conflictNotes String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  cases Case[]
+
+  @@map("clients")
+}
+
+model Case {
+  id              String     @id @default(cuid())
+  clientId        String
+  client          Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title           String
+  type            String?
+  caseNumber      String?
+  court           String?
+  judge           String?
+  opposingCounsel String?
+  status          CaseStatus @default(OPEN)
+  // PACER linkage — set once the attorney attaches a federal docket to this case
+  pacerCaseId     String?
+  pacerCourtId    String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  tasks           Task[]
+  deadlines       Deadline[]
+  documents       Document[]
+  billingEntries  BillingEntry[]
+  docketEntries   PacerDocketEntry[]
+  citations       Citation[]
+
+  @@index([clientId])
+  @@map("cases")
+}
+
+model Task {
+  id         String    @id @default(cuid())
+  caseId     String
+  case       Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  title      String
+  assignee   String?
+  dueDate    DateTime?
+  done       Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  @@index([caseId])
+  @@map("tasks")
+}
+
+model Deadline {
+  id          String         @id @default(cuid())
+  caseId      String
+  case        Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  description String
+  dueDate     DateTime
+  source      DeadlineSource @default(MANUAL)
+  completed   Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+
+  @@index([caseId])
+  @@map("deadlines")
+}
+
+model Document {
+  id        String      @id @default(cuid())
+  caseId    String
+  case      Case        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  fileName  String
+  fileUrl   String
+  tag       DocumentTag @default(OTHER)
+  uploadedAt DateTime   @default(now())
+
+  @@index([caseId])
+  @@map("documents")
+}
+
+model BillingEntry {
+  id          String   @id @default(cuid())
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  description String
+  hours       Float
+  rate        Float
+  billable    Boolean  @default(true)
+  entryDate   DateTime @default(now())
+
+  @@index([caseId])
+  @@map("billing_entries")
+}
+
+// Docket entries pulled from PACER / RECAP for a case
+model PacerDocketEntry {
+  id           String   @id @default(cuid())
+  caseId       String
+  case         Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  entryNumber  Int?
+  entryDate    DateTime
+  description  String
+  documentUrl  String?
+  source       String   @default("RECAP") // "RECAP" or "PACER"
+  createdAt    DateTime @default(now())
+
+  @@index([caseId])
+  @@map("pacer_docket_entries")
+}
+
+// Westlaw citation references — link + citation text only, no Westlaw content is stored
+model Citation {
+  id           String   @id @default(cuid())
+  caseId       String
+  case         Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  citationText String
+  addedBy      String?
+  westlawUrl   String?
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  @@index([caseId])
+  @@map("citations")
+}
