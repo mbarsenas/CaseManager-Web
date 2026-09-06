@@ -56,7 +56,7 @@ function UploadForm({ caseId, onClose }: { caseId: string; onClose: () => void }
   }
   return <form className="record-form" onSubmit={upload}><h3>Upload document</h3><div className="field"><label htmlFor="upload-file">File (up to 20 MB)</label><input id="upload-file" name="file" type="file" required /></div><div className="field"><label htmlFor="upload-tag">Tag</label><select id="upload-tag" name="tag" defaultValue="OTHER">{["PLEADING","CORRESPONDENCE","EVIDENCE","CONTRACT","OTHER"].map(t=><option key={t}>{t}</option>)}</select></div>{error && <p role="alert" className="error">{error}</p>}<div className="actions"><button className="btn" disabled={saving}>{saving ? "Uploading…" : "Upload"}</button><button type="button" className="btn secondary" onClick={onClose} disabled={saving}>Cancel</button></div></form>;
 }
-export function RecordSection({ entity, records, caseId }: { entity: Entity; records: Row[]; caseId: string }) {
+export function RecordSection({ entity, records, caseId, children }: { entity: Entity; records: Row[]; caseId: string; children?: React.ReactNode }) {
   const router=useRouter(), [editing,setEditing]=useState<Row | "new" | null>(null), [upload,setUpload]=useState(false), [error,setError]=useState(""), [busy,setBusy]=useState(false), [pending,startTransition]=useTransition();
   const [deleting,setDeleting]=useState<string | null>(null);
   async function mutate(row:Row, method:string, body?:object) {
@@ -67,7 +67,8 @@ export function RecordSection({ entity, records, caseId }: { entity: Entity; rec
   return <section id={entity} className="case-section">
     <div className="section-heading"><h2>{definitions[entity].title} <span className="count">{records.length}</span></h2><div className="actions">{entity==="documents"&&<button className="btn" onClick={()=>{setUpload(true);setEditing(null);}}>Upload file</button>}<button className="btn secondary" onClick={()=>{setEditing("new");setUpload(false);}}>{entity==="documents"?"Add link":"Add"}</button></div></div>
     {entity==="citations"&&<p className="ledger-row-meta">Paste a citation, its Westlaw permalink, and notes explaining its relevance.</p>}
-    {entity==="docket"&&<p className="ledger-row-meta">Record docket entries and document links from PACER or RECAP. Entries are entered manually.</p>}
+    {entity==="docket"&&<p className="ledger-row-meta">Import entries from RECAP or add manual docket notes.</p>}
+    {children}
     {editing&&<RecordEditor key={editing==="new"?"new":editing.id} entity={entity} record={editing==="new"?undefined:editing} caseId={caseId} onClose={()=>setEditing(null)} />}
     {upload&&<UploadForm caseId={caseId} onClose={()=>setUpload(false)} />}
     {error&&<p role="alert" className="error">{error}</p>}
@@ -82,15 +83,15 @@ export function RecordSection({ entity, records, caseId }: { entity: Entity; rec
           {row.notes ? <p className="record-notes">{String(row.notes)}</p> : null}
           {entity==="citations"&&<div className="ledger-row-meta">{row.addedBy ? "Added by "+row.addedBy+" · " : ""}{displayDate(row.createdAt)}</div>}
           {canLink&&<a className="text-link" href={url} target="_blank" rel="noreferrer">{entity==="documents"?"Download / open document":entity==="citations"?"Open source":"Open docket document"}</a>}
+          {entity==="docket"&&Array.isArray(row.recapDocuments)&&row.recapDocuments.length>0&&<ul className="recap-documents">{row.recapDocuments.map((doc:any)=>typeof doc.url==="string"&&safeUrl(doc.url)?<li key={doc.id}><a href={doc.url} target="_blank" rel="noreferrer">{String(doc.name)}</a>{doc.available?"":" — PDF not available in RECAP"}</li>:null)}</ul>}
         </div>
         <div className="record-actions">{entity==="billing"&&<strong>{money(Number(row.hours)*Number(row.rate))}</strong>}
           {(entity==="tasks"||entity==="deadlines")&&<button className="btn secondary" disabled={busy||pending} onClick={()=>mutate(row,"PATCH",entity==="tasks"?{done:!done}:{completed:!done})}>{done?"Reopen":"Complete"}</button>}
-          <button className="btn secondary" onClick={()=>{setEditing(row);setUpload(false);}}>Edit</button>
-          {deleting===row.id?<div className="delete-confirm"><span>Delete this record?</span><button className="btn danger" disabled={busy||pending} onClick={()=>mutate(row,"DELETE")}>Delete</button><button className="btn secondary" onClick={()=>setDeleting(null)}>Cancel</button></div>:<button className="text-button" onClick={()=>setDeleting(row.id)}>Delete</button>}
+          {row.recapEntryId?<span className="status-tag">Imported from RECAP</span>:<><button className="btn secondary" onClick={()=>{setEditing(row);setUpload(false);}}>Edit</button>
+          {deleting===row.id?<div className="delete-confirm"><span>Delete this record?</span><button className="btn danger" disabled={busy||pending} onClick={()=>mutate(row,"DELETE")}>Delete</button><button className="btn secondary" onClick={()=>setDeleting(null)}>Cancel</button></div>:<button className="text-button" onClick={()=>setDeleting(row.id)}>Delete</button>}</>}
         </div>
       </article>;
     })}</div>}
     {entity==="billing"&&<p className="billing-total">Total billable: {money(records.filter(r=>r.billable).reduce((sum,r)=>sum+Number(r.hours)*Number(r.rate),0))}</p>}
   </section>;
 }
-

@@ -79,6 +79,10 @@ model Case {
   // PACER linkage — set once the attorney attaches a federal docket to this case
   pacerCaseId     String?
   pacerCourtId    String?
+  recapDocketId   String?
+  recapDocketName String?
+  recapNextPage   String?
+  recapLastSyncedAt DateTime?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
@@ -158,8 +162,11 @@ model PacerDocketEntry {
   description  String
   documentUrl  String?
   source       String   @default("RECAP") // "RECAP" or "PACER"
+  recapEntryId String?
+  recapDocuments Json?
   createdAt    DateTime @default(now())
 
+  @@unique([caseId, recapEntryId])
   @@index([caseId])
   @@map("pacer_docket_entries")
 }

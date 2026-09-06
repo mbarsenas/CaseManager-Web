@@ -11,7 +11,7 @@ A single-practice case management app built with Next.js, TypeScript, Prisma and
 - Create, edit, complete/reopen and delete tasks and deadlines.
 - Record billable and non-billable time, rates and dates; display the total billable amount.
 - Upload documents (20 MB maximum) or attach external links; categorize documents by tag.
-- Record PACER/RECAP docket entries manually with date, entry number, description and document link.
+- Connect a CourtListener RECAP docket and automatically import its pages, dates, descriptions and attachment links; add manual docket notes separately.
 - Add, edit and delete citations with citation text, a Westlaw permalink/source link and relevance notes. The server records the signed-in user's name/email and creation time.
 - Dashboard with outstanding deadlines and open-task count.
 - Authenticated APIs and file downloads, validated inputs and responsive layouts.
@@ -53,6 +53,8 @@ For a separate test environment, set `CASE_MANAGER_ENV_FILE` to its environment 
 The existing database was upgraded with the two additive fields in
 `prisma/changes/20260904_case_record.sql`: case type and citation author.
 The change preserves existing rows; existing citations have no recorded author.
+RECAP import state and remote entry identifiers are added by `prisma/changes/20260905_recap_import.sql`.
+Apply this additive SQL to an existing database before running the updated app.
 
 For a new empty database, set `DATABASE_URL` in `.env` and run:
 
@@ -82,9 +84,11 @@ The application treats every authenticated account as part of the same practice;
 
 ## Integrations and limits
 
-- Docket entries and their links are entered manually. Automatic PACER/RECAP retrieval and paid PACER purchases are not implemented; the old placeholder endpoint returns an explicit not-configured response.
+- In a case's PACER docket section, paste a CourtListener docket URL or numeric ID, select **Find docket**, verify the match, then **Connect and import**. Pages import automatically while the page stays open. Pause/resume retains progress; **Refresh docket** rechecks the archive without duplicating entries. Imported records are read-only; manual entries remain editable. A connected case cannot be switched to a different docket.
+- Imports use `COURTLISTENER_API_TOKEN` (or `RECAP_API_TOKEN` as a fallback). Rate limits pause the import; wait before resuming. Missing/invalid dates or entry IDs are skipped and reported. Attachment links indicate whether the document is available in RECAP.
+- Retrieval reads the existing RECAP archive only. Coverage may be incomplete or delayed. It does not purchase PACER data, download document files, or run scheduled background polling.
 - Deadlines are manually recorded, including a MANUAL/PACER source label. No jurisdictional rules engine or automatic legal deadline calculation is included.
-- CourtListener search remains an optional supplemental tool and can require `COURTLISTENER_API_TOKEN`. Its availability was not verified with a real token in this implementation.
+- CourtListener search remains an optional supplemental tool using `COURTLISTENER_API_TOKEN`.
 - Billing calculates time charges; invoices, payments, trust accounting and tax workflows are not included.
 - Multi-user invitations, password reset and role-based permissions are not included.
 
@@ -99,3 +103,4 @@ npm run build
 Validation tests cover invalid dates, dangerous URLs, invalid numeric inputs, required fields and protected-field writes.
 End-to-end verification on an isolated Neon branch covered sign-in, every record type, updates, completion, archive filtering, upload/download, unauthorized access and deletion.
 Browser verification covered sign-in, the case record and citation creation.
+RECAP checks cover URL restrictions, attachment parsing, rate limits, saved pagination and duplicate-free refreshes. The database integration test is opt-in via `RECAP_TEST_DATABASE_URL`; use an isolated test database.

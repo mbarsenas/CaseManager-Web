@@ -35,6 +35,7 @@ export async function updateRecord(entity: Entity, id: string, req: NextRequest)
     const data = parseRecord(entity, await req.json(), true);
     const existing = await model(entity).findUnique({ where: { id } });
     if (!existing) throw new HttpError(404, "Record not found.");
+    if (entity === "docket" && existing.recapEntryId) throw new HttpError(409, "Imported entries are maintained by RECAP. Add a separate manual entry for your notes.");
     if (entity === "documents" && "fileUrl" in data && data.fileUrl !== existing.fileUrl &&
       (String(data.fileUrl).startsWith("/api/files/") || String(existing.fileUrl).startsWith("/api/files/")))
       throw new InputError("An uploaded file's link cannot be changed.");
@@ -47,6 +48,7 @@ export async function deleteRecord(entity: Entity, id: string) {
     if (entity === "clients" || entity === "cases") throw new HttpError(405, "Archive cases instead of deleting their records.");
     const existing = await model(entity).findUnique({ where: { id } });
     if (!existing) throw new HttpError(404, "Record not found.");
+    if (entity === "docket" && existing.recapEntryId) throw new HttpError(409, "Imported entries are maintained by RECAP.");
     await model(entity).delete({ where: { id } });
     if (entity === "documents" && /^\/api\/files\/[a-zA-Z0-9-]+$/.test(existing.fileUrl)) {
       const { removeFile } = await import("./storage");
@@ -55,4 +57,3 @@ export async function deleteRecord(entity: Entity, id: string) {
     return NextResponse.json({ success: true });
   } catch (e) { return apiError(e); }
 }
-

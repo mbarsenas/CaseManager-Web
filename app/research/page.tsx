@@ -7,6 +7,7 @@ type SearchResult = { caseName: string; court: string; dateFiled: string; citati
 type CaseOption = { id: string; title: string };
 export default function ResearchPage() {
   const [query,setQuery]=useState(""),[results,setResults]=useState<SearchResult[]>([]);
+  const [scope,setScope]=useState("tx5");
   const [loading,setLoading]=useState(false),[searched,setSearched]=useState(false),[error,setError]=useState("");
   const [cases,setCases]=useState<CaseOption[]>([]),[casesLoading,setCasesLoading]=useState(true),[casesError,setCasesError]=useState("");
   const [selectedCaseId,setSelectedCaseId]=useState(""),[saved,setSaved]=useState<Set<string>>(new Set()),[savingKey,setSavingKey]=useState<string|null>(null);
@@ -20,7 +21,7 @@ export default function ResearchPage() {
   async function handleSearch(e:React.FormEvent) {
     e.preventDefault();if(!query.trim()||loading||savingKey)return;
     setLoading(true);setError("");setNotice("");setResults([]);setSearched(false);
-    try {const data=await requestJson<{results:SearchResult[]}>("/api/research?q="+encodeURIComponent(query.trim()));
+    try {const data=await requestJson<{results:SearchResult[]}>("/api/research?q="+encodeURIComponent(query.trim())+"&scope="+scope);
       if(!Array.isArray(data.results))throw new Error("Search returned an unexpected response.");
       setResults(data.results);setSearched(true);
     }catch(e){setError(errorMessage(e));}finally{setLoading(false);}
@@ -44,8 +45,15 @@ export default function ResearchPage() {
     <p className="ledger-row-meta" style={{marginBottom:20}}>Search published US case law via CourtListener. Results do not include Westlaw headnotes or a citator. Add existing Westlaw citations directly from the case record.</p>
     <form onSubmit={handleSearch} className="filter-bar">
       <div className="field"><label htmlFor="research-query">Search terms</label><input id="research-query" required value={query} onChange={e=>setQuery(e.target.value)} placeholder="e.g. negligence duty of care"/></div>
+      <div className="field"><label htmlFor="research-jurisdiction">Jurisdiction</label>
+        <select id="research-jurisdiction" value={scope} disabled={loading} onChange={e=>{setScope(e.target.value);setResults([]);setSearched(false);}}>
+          <option value="tx5">5th Circuit &amp; Texas (default)</option>
+          <option value="all">All jurisdictions</option>
+        </select>
+      </div>
       <button className="btn" disabled={loading||Boolean(savingKey)}>{loading?"Searching…":"Search"}</button>
     </form>
+    <p className="ledger-row-meta">{scope==="tx5"?"Preset: Fifth Circuit, Texas state appellate courts, and federal district courts in Texas.":"Searching all available jurisdictions."}</p>
     {casesLoading?<p role="status">Loading cases…</p>:casesError?<div><p role="alert" className="error">{casesError}</p><button className="btn secondary" onClick={loadCases}>Retry loading cases</button></div>:cases.length?<div className="field" style={{maxWidth:420}}>
       <label htmlFor="caseSelect">Save results to case</label><select id="caseSelect" value={selectedCaseId} disabled={Boolean(savingKey)} onChange={e=>{setSelectedCaseId(e.target.value);setNotice("");}}>
         <option value="">Select a case…</option>{cases.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}

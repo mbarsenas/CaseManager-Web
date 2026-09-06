@@ -6,12 +6,27 @@ export const dynamic = "force-dynamic";
 // published US case law. It's not a Westlaw replacement — no headnotes,
 // no KeyCite-style citator — but it gives real full-text case law search
 // inside the app at no licensing cost.
-const COURTLISTENER_SEARCH_URL = "https://www.courtlistener.com/api/rest/v3/search/";
+const COURTLISTENER_SEARCH_URL = "https://www.courtlistener.com/api/rest/v4/search/";
+
+// CourtListener court IDs covering Texas state courts + the Fifth Circuit
+// (which hears federal appeals from Texas). Used as the default search
+// scope; callers can pass scope=all to search every jurisdiction instead.
+const TX_5TH_CIRCUIT_COURTS = [
+  "ca5",        // U.S. Court of Appeals for the Fifth Circuit
+  "tex",        // Texas Supreme Court
+  "texcrimapp", // Texas Court of Criminal Appeals
+  "texapp",     // Texas Courts of Appeals
+  "txnd",       // U.S. District Court, N.D. Texas
+  "txsd",       // U.S. District Court, S.D. Texas
+  "txed",       // U.S. District Court, E.D. Texas
+  "txwd",       // U.S. District Court, W.D. Texas
+].join(" ");
 
 export async function GET(req: NextRequest) {
   try {
   await requireUser();
   const q = req.nextUrl.searchParams.get("q");
+  const scope = req.nextUrl.searchParams.get("scope"); // "tx5" (default) | "all"
 
   if (!q) {
     return NextResponse.json({ error: "q (query) is required" }, { status: 400 });
@@ -21,6 +36,9 @@ export async function GET(req: NextRequest) {
   url.searchParams.set("q", q);
   url.searchParams.set("type", "o"); // opinions
   url.searchParams.set("order_by", "score desc");
+  if (scope !== "all") {
+    url.searchParams.set("court", TX_5TH_CIRCUIT_COURTS);
+  }
 
   const headers: Record<string, string> = {};
   if (process.env.COURTLISTENER_API_TOKEN) {
@@ -55,7 +73,7 @@ export async function GET(req: NextRequest) {
     court: r.court,
     dateFiled: r.dateFiled,
     citation: Array.isArray(r.citation) ? r.citation[0] : r.citation,
-    snippet: r.snippet,
+    snippet: r.snippet || (Array.isArray(r.opinions) ? r.opinions.map((opinion: { snippet?: string }) => opinion.snippet || "").filter(Boolean).join(" … ") : ""),
     absoluteUrl: r.absolute_url ? `https://www.courtlistener.com${r.absolute_url}` : null,
   }));
 

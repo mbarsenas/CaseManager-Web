@@ -188,6 +188,10 @@ h3 { font-size: 1.05rem; font-weight: 600; }
 .error { color: var(--danger); }
 .delete-confirm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .8rem; }
 .billing-total { text-align: right; font-weight: 600; }
+.recap-preview { border-top: 1px solid var(--paper-line); margin-top: 20px; padding-top: 16px; }
+.recap-preview .actions { margin-top: 16px; }
+.recap-documents { padding-left: 20px; font-size: .85rem; }
+.recap-documents li { margin: 5px 0; }
 .filter-bar { display: flex; gap: 12px; align-items: flex-end; margin-block: 28px 16px; }
 .filter-bar .field { margin: 0; flex: 1; }
 .btn:disabled { opacity: .55; cursor: wait; }

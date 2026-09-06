@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { EditRecord, RecordSection } from "@/components/RecordControls";
+import { RecapConnection } from "@/components/RecapConnection";
 export const dynamic = "force-dynamic";
 export default async function CaseDetailPage({ params }: { params: { id: string } }) {
   if (!(await getServerSession(authOptions))?.user) redirect("/login");
@@ -22,7 +23,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
     <RecordSection entity="tasks" records={c.tasks} caseId={c.id}/>
     <RecordSection entity="documents" records={c.documents} caseId={c.id}/>
     <RecordSection entity="billing" records={c.billingEntries} caseId={c.id}/>
-    <RecordSection entity="docket" records={c.docketEntries} caseId={c.id}/>
+    <RecordSection entity="docket" records={c.docketEntries} caseId={c.id}>
+      <RecapConnection caseId={c.id} configured={Boolean(process.env.COURTLISTENER_API_TOKEN||process.env.RECAP_API_TOKEN)} initial={{docketId:c.recapDocketId,name:c.recapDocketName,hasMore:Boolean(c.recapNextPage),lastSyncedAt:c.recapLastSyncedAt}} />
+    </RecordSection>
     <RecordSection entity="citations" records={c.citations} caseId={c.id}/>
   </div>;
 }
